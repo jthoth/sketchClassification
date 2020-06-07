@@ -3,14 +3,16 @@ from tensorflow.train import Feature, BytesList, Int64List, FloatList, Example, 
 from tensorflow.image import central_crop, flip_left_right, rot90, resize
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow import one_hot, reshape, cast
-from random import random
+from random import random, uniform
+from src.utils import RunningStat
 from os.path import join
+from numpy import zeros
 from tqdm import tqdm
 
 
 class DatasetBuilder(object):
     """  Is an auto contained tf-records functions which
-    allow us to create it given a single path
+    allow us to create it given a single path.
 
     :param path: place where the image are
     :param shape: define width and height of image
@@ -19,9 +21,10 @@ class DatasetBuilder(object):
 
     def __init__(self, path, shape=(256, 256), classes=250):
         self.path, self.shape = path, shape
+        self.stats = RunningStat(shape + (3, ))
         self.classes = classes
 
-    def record_writer(self, label, name, writer):
+    def record_writer(self, label, name, writer, save=True):
         """ Write an specific example on a writer tensor
         record
 
@@ -31,11 +34,14 @@ class DatasetBuilder(object):
         :return:
         """
         image = load_img(name, target_size=self.shape)
-        feature = dict(image=_bytes_feature(
-            img_to_array(image, dtype='uint8').tostring()
-        ), label=_int64_feature(label))
+        image = img_to_array(image, dtype='uint8')
+        feature = dict(image=_bytes_feature(image.tostring()),
+                       label=_int64_feature(label))
         sample = Example(features=Features(feature=feature))
         writer.write(sample.SerializeToString())
+        if save:
+            self.stats(image)
+
 
     def reader(self, file_reader):
         """ Build a iterator from file object reader line by
@@ -55,7 +61,8 @@ class DatasetBuilder(object):
         :param filename: output file data
         :return:
         """
-        writer = TFRecordWriter(join(self.path, 'train.records'))
+        ouput = '{}.records'.format(filename.split('.')[0])
+        writer = TFRecordWriter(join(self.path, ouput))
         with open(join(self.path, filename)) as file:
             for (name, label) in tqdm(self.reader(file)):
                 self.record_writer(label, name, writer)
@@ -71,7 +78,7 @@ class DatasetBuilder(object):
         writer = TFRecordWriter(join(self.path, 'test.records'))
         with open(join(self.path, filename)) as file:
             for (name, label) in tqdm(self.reader(file)):
-                self.record_writer(label, name, writer)
+                self.record_writer(label, name, writer, False)
         writer.close()
 
     @staticmethod
@@ -102,9 +109,10 @@ class DatasetBuilder(object):
         :return: 0-1 tensor and one-hot label
         """
         image = reshape(image, self.shape + (3, ))
+        image = image - self.stats.mean
         return cast(image, dtype='float32')/255., label
 
-    def data_augmentation(self, image, label, th=.5):
+    def data_augmentation(self, image, label, th=.50):
         """  Basic Data augmentation  used in this pipeline
         in this part we only use rotate, flip and central crop
 
@@ -116,18 +124,16 @@ class DatasetBuilder(object):
 
         """
         image = reshape(image, self.shape + (3, ))
+        image = image - self.stats.mean
         if random() > th:
-            image = central_crop(image, central_fraction=random())
+            size = uniform(0.90, 1.)
+            image = central_crop(image, central_fraction=size)
             image = resize(image, self.shape, antialias=True)
-        if random() > th:
-            image = flip_left_right(image)
-        if random() > th:
-            image = rot90(image)
         return cast(image, dtype='float32')/255., label
 
-    def __call__(self):
-        self.build_train()
-        self.build_test()
+    def __call__(self, filetrain='train.txt', filetest='test.txt'):
+        self.build_train(filename=filetrain)
+        self.build_test(filename=filetest)
 
 
 def _int64_feature(value):
