@@ -7,19 +7,19 @@ class TestModelStructure(TestCase):
 
     def test_vgg_model_structure_should_be_ok(self):
         expected_layers = 27
-        model = models.VggModel()
+        model = models.PlainNetwork()
         model.build((1, 256, 256, 3))
         total = len(model.information_flow)
         self.assertEqual(total, expected_layers)
 
     def test_dataset_train_test_builder_should_be_ok(self):
         builder = loader.DatasetBuilder('data')
-        # builder()
+        builder()
 
     def test_loader_tf_data_set_should_be_ok(self):
         builder = loader.DatasetBuilder('data', shape=(256, 256))
         dataset = TFRecordDataset('data/test.records')
-        dataset = dataset.map(builder.decoder)
-        dataset = dataset.map(builder.data_augmentation)
+        dataset = dataset.map(builder.decode)
+        dataset = dataset.map(builder.augmentation())
         dataset = dataset.shuffle(4000)
         dataset = dataset.batch(batch_size=60)
