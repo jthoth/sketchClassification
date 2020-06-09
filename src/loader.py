@@ -35,7 +35,7 @@ class DatasetBuilder(object):
             img_to_array(image, dtype='uint8').tostring()
         ), label=_int64_feature(label))
         features = train.Features(feature=feature)
-        samples = train.Example(features)
+        samples = train.Example(features=features)
         writer.write(samples.SerializeToString())
 
     def reader(self, file_reader):

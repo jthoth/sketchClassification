@@ -181,7 +181,7 @@ class SkipNetwork(BaseModelActions):
         return [layers.Conv2D(maps, (1, 1), **kw)
                 for maps, scale in zip(*walker) if scale]
 
-    def information_process_flow(self):
+    def build_information_flow(self):
         """ Add dynamically operations over chain information
         flow in order to define the steps of the  whole
         computational graph  procedure
@@ -225,7 +225,7 @@ class SkipNetwork(BaseModelActions):
         return x
 
 
-class SqueezeExcitation(PlainNetwork):
+class SqueezeExcitation(SkipNetwork):
     """ This class builds a dynamically SqueezeExcitation Net
      the model was described int the homework instructions.
 
@@ -245,7 +245,7 @@ class SqueezeExcitation(PlainNetwork):
     def fill_squeeze_procedures(self, ratio=.25):
         """ Allow us to define the fire path in the walking
         procedure. The used patch was inspired in the original
-        paper with a extra pair steps with batch normalization
+        paper.
 
         :param ratio: quantity which will scale the channels
         of the images blocks
@@ -258,10 +258,8 @@ class SqueezeExcitation(PlainNetwork):
             steps.append([
                 layers.GlobalAveragePooling2D(),
                 layers.Dense(int(filter_size * ratio), **kw),
-                layers.BatchNormalization(),
                 layers.Activation('relu'),
                 layers.Dense(filter_size, **kw),
-                layers.BatchNormalization(),
                 layers.Activation('sigmoid'),
                 layers.multiply])
 

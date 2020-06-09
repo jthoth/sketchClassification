@@ -1,4 +1,4 @@
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import numpy as np
 
 
@@ -26,7 +26,7 @@ class ModelPerformanceExplorer(object):
         """
         x, y = (list(), list())
         for _x, _y in tqdm(dataset.as_numpy_iterator()):
-            x.extend(_x),  y.extend(_y)
+            x.extend(_x), y.extend(np.argmax(_y, 1))
         return np.array(x), np.array(y)
 
     @staticmethod
@@ -61,7 +61,7 @@ class ModelPerformanceExplorer(object):
         :return:
         """
         errors = self.y_pred != self.y
-        return self.extract_cases(errors), errors
+        return self.extract_cases(errors)[::-1], errors
 
     def success_cases(self):
         """ Compute the success cases

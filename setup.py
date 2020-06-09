@@ -20,7 +20,7 @@ def main():
 
     args = parser.parse_args()
 
-    if MODELS.get(args.model):
+    if MODELS.get(args.model) is None:
         raise ValueError("Model Does not Exist")
 
     builder = DatasetBuilder(args.data, shape=(256, 256))
@@ -44,7 +44,7 @@ def main():
 
     log_dir = join('logs', args.model)
     tensor_board_callback = callbacks.TensorBoard(log_dir=log_dir)
-    model_checkpoint = callbacks.ModelCheckpoint('{}.h5'.format(args.model),
+    model_checkpoint = callbacks.ModelCheckpoint('models/{}.h5'.format(args.model),
                                                  save_best_only=True)
     reduce_lr = callbacks.ReduceLROnPlateau(factor=0.2, patience=5,
                                             min_lr=1e-6)
